@@ -251,6 +251,36 @@ test('tab context menu closes ordered groups and guards dirty tabs', {
   await menu.waitFor({ state: 'hidden' })
 })
 
+test('middle-click closes tabs without changing the active document', {
+  timeout: 30000,
+}, async (t) => {
+  const profile = await mkdtemp(join(tmpdir(), 'hibi-tab-middle-click-'))
+  const app = await electron.launch({
+    args: [resolve('.'), `--user-data-dir=${profile}`],
+  })
+  t.after(async () => {
+    await app.close()
+    await rm(profile, { recursive: true, force: true })
+  })
+  const page = await app.firstWindow()
+  page.setDefaultTimeout(6000)
+  await page.getByRole('textbox', { name: /document editor/i }).waitFor()
+  const first = (await page.evaluate(() => window.hibi.getDocument())).tabId
+  await clickMenu(app, 'New')
+  await clickMenu(app, 'New')
+  const active = (await page.evaluate(() => window.hibi.getDocument())).tabId
+  await page.locator(`[data-tab-id="${first}"]`).click({ button: 'middle' })
+  await page.locator(`[data-tab-id="${first}"]`).waitFor({ state: 'hidden' })
+  let document = await page.evaluate(() => window.hibi.getDocument())
+  assert.equal(document.tabId, active)
+  assert.equal(document.tabs.length, 2)
+  await page.locator(`[data-tab-id="${active}"]`).click({ button: 'middle' })
+  await page.locator(`[data-tab-id="${active}"]`).waitFor({ state: 'hidden' })
+  document = await page.evaluate(() => window.hibi.getDocument())
+  assert.equal(document.tabs.length, 1)
+  assert.notEqual(document.tabId, active)
+})
+
 test('single-file mode guards replacement, closes other tabs safely, and persists', {
   timeout: 45000,
 }, async (t) => {

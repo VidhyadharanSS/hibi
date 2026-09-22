@@ -272,6 +272,9 @@ export function DocumentTabs({
                 if (event.button === 0)
                   event.currentTarget.focus({ preventScroll: true })
               }}
+              onAuxClick={(event) => {
+                if (event.button === 1 && !busy && !closing) onClose(tab.id)
+              }}
               onContextMenu={(event) => {
                 event.preventDefault()
                 if (busy || closing) return
